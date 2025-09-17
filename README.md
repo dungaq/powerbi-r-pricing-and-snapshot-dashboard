@@ -41,14 +41,14 @@ The project was delivered for a **Media Agency** client. To protect confidential
 
 ---
 
-## 📈 Example Outputs
+##  Example Outputs
 
 **Snapshot Dashboard (synthetic data):**
 ![](outputs/Snapshot%20Dashboard.png)
 
 ---
 
-## 🗂 Repository Structure
+##  Repository Structure
 
 ```
 pricing-snapshot-dashboard/
