@@ -10,7 +10,7 @@ The project was delivered for a **Media Agency** client. To protect confidential
 
 ---
 
-## 🎯 Project Overview
+##  Project Overview
 
 * **Objective:** Design dashboards in Power BI to support pricing decisions and monthly commercial performance reviews.
 * **Scope:** Development of a **Snapshot dashboard** (Year-to-Date KPIs, service mix, client concentration) and a **Pricing dashboard** (dynamic cost allocation, labour markups, blended rate guardrails).
