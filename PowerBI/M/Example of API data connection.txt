@@ -1,0 +1,35 @@
+let
+    apiKey = API_Key,
+    pageSize = 100,
+
+    GetPage = (offset as number) =>
+        let
+            queryRecord = [
+                page = Number.RoundDown(offset / pageSize) + 1,
+                offset = offset,
+                limit = pageSize,
+                filters = {}
+            ],
+            queryText = Text.FromBinary(Json.FromValue(queryRecord), TextEncoding.Utf8),
+            raw = Web.Contents(
+                "https://api.wipsystem.com/v1",
+                [
+                    RelativePath = "clientsubset1",
+                    Query = [ q = queryText ],
+                    Headers = [
+                        #"apiKey" = apiKey,
+                        #"Content-Type" = "application/json"
+                    ]
+                ]
+            ),
+            json = Json.Document(raw),
+            items = if Record.HasFields(json, "data") then json[data] else {}
+        in
+            items,
+
+    GetAllPages = List.Generate(
+        () => [offset = 0, pageData = GetPage(0)],
+        each List.Count([pageData]) > 0,
+        each [offset = [offset] + pageSize, pageData = GetPage([offset])],
+        each [pageData]
+    ),
