@@ -1,0 +1,83 @@
+Markup_Predicted Complexity Label = 
+VAR svc      = SELECTEDVALUE ( 'WIP_Project'[servicerequired] )
+VAR estCost  = [Cost_Total production cost_WIP]                
+VAR estHours = [Cost_Total project labour hour]            
+
+VAR MeanCost  =
+    CALCULATE ( AVERAGE ( WIP_Project[projectEstimatedCost] ),
+        'WIP_Project'[Status] = "Closed",
+        'WIP_Project'[servicerequired] = svc
+    )
+VAR SdCost    =
+    CALCULATE ( STDEV.P ( WIP_Project[projectEstimatedCost] ),
+        'WIP_Project'[Status] = "Closed",
+        'WIP_Project'[servicerequired] = svc
+    )
+VAR MeanHours =
+    CALCULATE ( AVERAGE ( 'WIP_Project'[projectEstimatedHours] ),
+        'WIP_Project'[Status] = "Closed",
+        'WIP_Project'[servicerequired] = svc
+    )
+VAR SdHours   =
+    CALCULATE ( STDEV.P ( 'WIP_Project'[projectEstimatedHours] ),
+        'WIP_Project'[Status] = "Closed",
+        'WIP_Project'[servicerequired] = svc
+    )
+VAR estCostZ  = DIVIDE ( estCost  - MeanCost , SdCost  , 0 )
+VAR estHoursZ = DIVIDE ( estHours - MeanHours, SdHours , 0 )
+VAR wC = 1.0
+VAR wH = 1.0
+VAR CentroidsRaw =
+    FILTER (
+        ADDCOLUMNS (
+            DISTINCT ( 'WIP_Project'[Complexity_Label] ),
+            "AvgCost",
+                CALCULATE ( AVERAGE ( WIP_Project[projectEstimatedCost] ),
+                    'WIP_Project'[Status] = "Closed",
+                    'WIP_Project'[servicerequired] = svc
+                ),
+            "AvgHours",
+                CALCULATE ( AVERAGE ( 'WIP_Project'[projectEstimatedHours] ),
+                    'WIP_Project'[Status] = "Closed",
+                    'WIP_Project'[servicerequired] = svc
+                )
+        ),
+        NOT ISBLANK ( [AvgCost] ) && NOT ISBLANK ( [AvgHours] )
+    )
+
+VAR CentroidsZ =
+    ADDCOLUMNS (
+        CentroidsRaw,
+        "AvgCostZ",  DIVIDE ( [AvgCost]  - MeanCost , SdCost  , 0 ),
+        "AvgHoursZ", DIVIDE ( [AvgHours] - MeanHours, SdHours , 0 )
+    )
+
+VAR WithDist =
+    ADDCOLUMNS (
+        CentroidsZ,
+        "Dist",
+            SQRT (
+                wC * POWER ( estCostZ  - [AvgCostZ] , 2 ) +
+                wH * POWER ( estHoursZ - [AvgHoursZ], 2 )
+            )
+    )
+
+VAR Best      = TOPN ( 1, WithDist, [Dist], ASC )
+VAR BestLabel = MAXX ( Best, 'WIP_Project'[Complexity_Label] )
+
+VAR Ranked =
+    ADDCOLUMNS (
+        CentroidsRaw,
+        "Order", RANKX ( CentroidsRaw, 'WIP_Project'[Complexity_Label], , ASC, DENSE )
+    )
+VAR N        = COUNTROWS ( Ranked )
+VAR BinSize  = MAX ( 1, CEILING ( DIVIDE ( N, 3 ), 1 ) )
+VAR BestOrd  = MAXX ( FILTER ( Ranked, 'WIP_Project'[Complexity_Label] = BestLabel ), [Order] )
+VAR Group123 = MIN ( 3, 1 + INT ( DIVIDE ( BestOrd - 1, BinSize ) ) )
+
+RETURN
+IF (
+    ISBLANK ( svc ) || ISBLANK ( estCost ) || ISBLANK ( estHours ) || ISEMPTY ( Best ),
+    BLANK (),
+    Group123
+)
